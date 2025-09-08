@@ -1,0 +1,24 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TurboTuga Runner</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="start-screen">
+    <img src="assets/logo.png" alt="TurboTuga Logo" class="logo"/>
+    <h1>TurboTuga Runner</h1>
+    <button id="play-btn">PLAY</button>
+  </div>
+  <canvas id="gameCanvas"></canvas>
+  <div id="hud">
+    <p id="score">Score: 0</p>
+    <p id="highscore">High Score: 0</p>
+    <button id="swap-btn" onclick="window.open('https://www.orca.so/?tokenIn=9QLR3WrENnBGsv6kL33d4kDHvak71k2hBvKbHgEDwQtQ&tokenOut=So11111111111111111111111111111111111111112','_blank')">Swap on Orca</button>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
