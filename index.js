@@ -1,0 +1,179 @@
+import React, { useRef, useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import turboTugaSprite from "../public/Logo.jpg";
+
+export default function TurboTugaGame() {
+  const canvasRef = useRef(null);
+  const [score, setScore] = useState(0);
+  const [coins, setCoins] = useState([]);
+  const [obstacles, setObstacles] = useState([]);
+  const [isGameOver, setIsGameOver] = useState(false);
+  const [isJumping, setIsJumping] = useState(false);
+  const [isColliding, setIsColliding] = useState(false);
+  const [y, setY] = useState(200);
+  const [velocity, setVelocity] = useState(0);
+  const gravity = 0.8;
+  const jumpStrength = -15;
+
+  // Sons
+  const coinSound = useRef(null);
+  const hitSound = useRef(null);
+  const gameOverSound = useRef(null);
+
+  useEffect(() => {
+    coinSound.current = new Audio("/sounds/coin.mp3");
+    hitSound.current = new Audio("/sounds/hit.mp3");
+    gameOverSound.current = new Audio("/sounds/gameover.mp3");
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+    img.src = turboTugaSprite;
+
+    let frameId;
+
+    const spawnCoin = () => {
+      setCoins(prev => [...prev, { x: 800, y: 150 + Math.random() * 100 }]);
+    };
+
+    const spawnObstacle = () => {
+      setObstacles(prev => [...prev, { x: 800, y: 230 }]);
+    };
+
+    const update = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Desenhar chão
+      ctx.fillStyle = "#e0e0e0";
+      ctx.fillRect(0, 280, canvas.width, 20);
+
+      // Atualizar gravidade
+      setY(prevY => {
+        let newY = prevY + velocity;
+        if (newY > 200) {
+          newY = 200;
+          setVelocity(0);
+          setIsJumping(false);
+        } else {
+          setVelocity(prevV => prevV + gravity);
+        }
+        return newY;
+      });
+
+      // Sprites do personagem
+      if (isColliding) {
+        ctx.save();
+        ctx.translate(100, y);
+        ctx.rotate(Math.sin(Date.now() / 100) * 0.5);
+        ctx.globalAlpha = 0.7;
+        ctx.drawImage(img, -25, -25, 50, 50);
+        ctx.restore();
+      } else if (isJumping) {
+        ctx.drawImage(img, 100, y - 20, 50, 50);
+      } else {
+        ctx.drawImage(img, 100, y, 50, 50);
+      }
+
+      // Atualizar moedas
+      setCoins(prevCoins => prevCoins.filter(coin => {
+        const newX = coin.x - 5;
+        ctx.fillStyle = "gold";
+        ctx.beginPath();
+        ctx.arc(newX, coin.y, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (newX < -10) return false;
+
+        if (Math.abs(newX - 120) < 30 && Math.abs(coin.y - y) < 30) {
+          setScore(s => s + 10);
+          coinSound.current.play();
+          return false;
+        }
+
+        coin.x = newX;
+        return true;
+      }));
+
+      // Atualizar obstáculos
+      setObstacles(prevObstacles => prevObstacles.filter(ob => {
+        const newX = ob.x - 6;
+        ctx.fillStyle = "red";
+        ctx.fillRect(newX, ob.y, 20, 40);
+
+        if (newX < -20) return false;
+
+        if (Math.abs(newX - 120) < 30 && Math.abs(ob.y - y) < 40) {
+          hitSound.current.play();
+          setIsColliding(true);
+          setTimeout(() => setIsColliding(false), 500);
+          setIsGameOver(true);
+          gameOverSound.current.play();
+        }
+
+        ob.x = newX;
+        return true;
+      }));
+
+      // HUD
+      ctx.fillStyle = "black";
+      ctx.font = "20px Arial";
+      ctx.fillText(`Score: ${score}`, 20, 30);
+
+      if (!isGameOver) {
+        frameId = requestAnimationFrame(update);
+      } else {
+        ctx.fillStyle = "black";
+        ctx.font = "40px Arial";
+        ctx.fillText("GAME OVER", 250, 150);
+      }
+    };
+
+    frameId = requestAnimationFrame(update);
+
+    const coinInterval = setInterval(spawnCoin, 3000);
+    const obstacleInterval = setInterval(spawnObstacle, 4000);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      clearInterval(coinInterval);
+      clearInterval(obstacleInterval);
+    };
+  }, [velocity, isJumping, isColliding, score, isGameOver]);
+
+  const handleJump = () => {
+    if (!isJumping && !isGameOver) {
+      setVelocity(jumpStrength);
+      setIsJumping(true);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-green-200 to-green-400">
+      <motion.h1 className="text-4xl font-bold mb-4">🐢 Turbo Tuga Run</motion.h1>
+      <canvas
+        ref={canvasRef}
+        width={800}
+        height={300}
+        className="border-4 border-green-600 rounded-2xl shadow-xl"
+        onClick={handleJump}
+      />
+      {isGameOver && (
+        <button
+          className="mt-4 px-6 py-2 bg-green-700 text-white rounded-xl shadow-lg"
+          onClick={() => {
+            setScore(0);
+            setCoins([]);
+            setObstacles([]);
+            setIsGameOver(false);
+            setY(200);
+          }}
+        >
+          Restart
+        </button>
+      )}
+      <p className="mt-2 text-lg">Clique ou pressione espaço para pular</p>
+    </div>
+  );
+}
